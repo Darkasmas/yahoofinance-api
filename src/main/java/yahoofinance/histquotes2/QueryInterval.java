@@ -6,7 +6,8 @@ package yahoofinance.histquotes2;
  * @author Stijn Strickx
  */
 public enum QueryInterval {
-    
+
+    FIVEMIN("5m"),
     DAILY("1d"),
     WEEKLY("5d"),
     MONTHLY("1mo");

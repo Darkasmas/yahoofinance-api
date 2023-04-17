@@ -16,6 +16,7 @@ import yahoofinance.histquotes2.HistQuotes2Request;
 import yahoofinance.histquotes2.HistSplitsRequest;
 import yahoofinance.histquotes2.HistoricalDividend;
 import yahoofinance.histquotes2.HistoricalSplit;
+import yahoofinance.query2v8.HistQuotesQuery2V8Request;
 import yahoofinance.quotes.query1v7.StockQuotesQuery1V7Request;
 import yahoofinance.quotes.stock.StockDividend;
 import yahoofinance.quotes.stock.StockQuote;
@@ -323,7 +324,7 @@ public class Stock {
      */
     public List<HistoricalQuote> getHistory(Calendar from, Calendar to, Interval interval) throws IOException {
         if(YahooFinance.HISTQUOTES2_ENABLED.equalsIgnoreCase("true")) {
-            HistQuotes2Request hist = new HistQuotes2Request(this.symbol, from, to, interval);
+            HistQuotesQuery2V8Request hist = new HistQuotesQuery2V8Request(this.symbol, from, to, interval);
             this.setHistory(hist.getResult());
         } else {
             HistQuotesRequest hist = new HistQuotesRequest(this.symbol, from, to, interval);

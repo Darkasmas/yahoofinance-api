@@ -377,8 +377,7 @@ public class YahooFinance {
     private static Map<String, Stock> getQuotes(String query, boolean includeHistorical) throws IOException {
         Map<String, Stock> result = new HashMap<String, Stock>();
         if(YahooFinance.QUOTES_QUERY1V7_ENABLED.equalsIgnoreCase("true")) {
-            StockQuotesQuery1V7Request request = new StockQuotesQuery1V7Request(query);
-            List<Stock> stocks = request.getResult();
+            List<Stock> stocks = List.of(new Stock(query));
             for(Stock stock : stocks) {
                 result.put(stock.getSymbol(), stock);
             }

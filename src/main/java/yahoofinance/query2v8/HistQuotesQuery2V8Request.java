@@ -7,6 +7,9 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -23,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import yahoofinance.Utils;
 import yahoofinance.YahooFinance;
 import yahoofinance.histquotes.HistoricalQuote;
+import yahoofinance.histquotes.Interval;
 import yahoofinance.histquotes2.QueryInterval;
 import yahoofinance.util.RedirectableRequest;
 
@@ -37,7 +41,9 @@ public class HistQuotesQuery2V8Request {
     private final String symbol;
     private final Calendar from;
     private final Calendar to;
-    private final QueryInterval interval;
+    private final Interval interval;
+
+    private String range;
 
     public static final Calendar DEFAULT_FROM = Calendar.getInstance();
 
@@ -47,36 +53,22 @@ public class HistQuotesQuery2V8Request {
     public static final Calendar DEFAULT_TO = Calendar.getInstance();
     public static final QueryInterval DEFAULT_INTERVAL = QueryInterval.MONTHLY;
 
-    public HistQuotesQuery2V8Request(String symbol) {
-        this(symbol, DEFAULT_INTERVAL);
-    }
-
-    public HistQuotesQuery2V8Request(String symbol, QueryInterval interval) {
-        this(symbol, DEFAULT_FROM, DEFAULT_TO, interval);
-    }
-
-
-    public HistQuotesQuery2V8Request(String symbol, Calendar from, Calendar to) {
-        this(symbol, from, to, DEFAULT_INTERVAL);
-    }
-
-    public HistQuotesQuery2V8Request(String symbol, Calendar from, Calendar to, QueryInterval interval) {
+    public HistQuotesQuery2V8Request(String symbol, Calendar from, Calendar to, Interval interval) {
         this.symbol = symbol;
         this.from = this.cleanHistCalendar(from);
         this.to = this.cleanHistCalendar(to);
         this.interval = interval;
-    }
 
-    public HistQuotesQuery2V8Request(String symbol, Date from, Date to) {
-        this(symbol, from, to, DEFAULT_INTERVAL);
-    }
-
-    public HistQuotesQuery2V8Request(String symbol, Date from, Date to, QueryInterval interval) {
-        this(symbol, interval);
-        this.from.setTime(from);
-        this.to.setTime(to);
-        this.cleanHistCalendar(this.from);
-        this.cleanHistCalendar(this.to);
+        long daysDuration = ChronoUnit.DAYS.between(from.toInstant(), to.toInstant());
+        if (daysDuration < 1) {
+            this.range = Range.ONE_DAY.value;
+        } else if (daysDuration < 5) {
+            this.range = Range.FIVE_DAYS.value;
+        } else if (daysDuration < 30) {
+            this.range = Range.ONE_MONTH.value;
+        } else {
+            this.range = Range.ONE_YEAR.value;
+        }
     }
 
     /**
@@ -102,14 +94,20 @@ public class HistQuotesQuery2V8Request {
         JsonNode opens = quotes.get("open");
         JsonNode highs = quotes.get("high");
         JsonNode lows = quotes.get("low");
-        JsonNode adjCloses = indicators.get("adjclose").get(0).get("adjclose");
+//        JsonNode adjCloses = indicators.get("adjclose").get(0).get("adjclose");
 
         List<HistoricalQuote> result = new ArrayList<HistoricalQuote>();
         for (int i = 0; i < timestamps.size(); i++) {
             long timestamp = timestamps.get(i).asLong();
             Calendar calendar = Calendar.getInstance();
             calendar.setTimeInMillis(timestamp * 1000);
-            BigDecimal adjClose = adjCloses.get(i).decimalValue();
+            if (interval.equals(Interval.DAILY)) {
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+            }
+//            BigDecimal adjClose = adjCloses.get(i).decimalValue();
             long volume = volumes.get(i).asLong();
             BigDecimal open = opens.get(i).decimalValue();
             BigDecimal high = highs.get(i).decimalValue();
@@ -123,9 +121,23 @@ public class HistQuotesQuery2V8Request {
                 low,
                 high,
                 close,
-                adjClose,
+                null,
                 volume);
             result.add(quote);
+        }
+
+        // Remove the last day if last day == today
+        if (interval.equals(Interval.DAILY)) {
+            Calendar today = Calendar.getInstance();
+            today.set(Calendar.HOUR_OF_DAY, 0);
+            today.set(Calendar.MINUTE, 0);
+            today.set(Calendar.SECOND, 0);
+            today.set(Calendar.MILLISECOND, 0);
+            Calendar lastRecord = result.get(result.size() - 1).getDate();
+
+            if (lastRecord.getTime().equals(today.getTime())) {
+                result.remove(result.size() - 1);
+            }
         }
 
         return result;
@@ -141,8 +153,7 @@ public class HistQuotesQuery2V8Request {
         }
 
         Map<String, String> params = new LinkedHashMap<String, String>();
-        params.put("period1", String.valueOf(this.from.getTimeInMillis() / 1000));
-        params.put("period2", String.valueOf(this.to.getTimeInMillis() / 1000));
+        params.put("range", this.range);
         params.put("interval", this.interval.getTag());
         params.put("events", "div|split");
 
@@ -167,6 +178,22 @@ public class HistQuotesQuery2V8Request {
             builder.append(line);
         }
         return builder.toString();
+    }
+
+    private enum Range {
+
+        ONE_DAY("1d"),
+        FIVE_DAYS("5d"),
+        ONE_MONTH("1mo"),
+        THREE_MONTHS("3mo"),
+        SIX_MONTHS("6mo"),
+        ONE_YEAR("1y");
+
+        private final String value;
+
+        Range(String value) {
+            this.value = value;
+        }
     }
 
 }

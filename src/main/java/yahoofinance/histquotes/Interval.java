@@ -6,10 +6,11 @@ package yahoofinance.histquotes;
  * @author Stijn Strickx
  */
 public enum Interval {
-    
-    DAILY("d"),
-    WEEKLY("w"),
-    MONTHLY("m");
+
+    FIVEMIN("5m"),
+    DAILY("1d"),
+    WEEKLY("1wk"),
+    MONTHLY("1mo");
     
     private final String tag;
     

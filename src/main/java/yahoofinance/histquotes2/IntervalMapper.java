@@ -10,6 +10,7 @@ public class IntervalMapper {
 
     public static QueryInterval get(Interval interval) {
         switch(interval) {
+            case FIVEMIN: return QueryInterval.FIVEMIN;
             case DAILY: return QueryInterval.DAILY;
             case WEEKLY: return QueryInterval.WEEKLY;
             case MONTHLY: return QueryInterval.MONTHLY;

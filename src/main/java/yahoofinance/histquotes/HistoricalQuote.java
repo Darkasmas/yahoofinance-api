@@ -34,7 +34,7 @@ public class HistoricalQuote {
         this.low = low;
         this.high = high;
         this.close = close;
-        this.adjClose = adjClose;
+//        this.adjClose = adjClose;
         this.volume = volume;
     }
 
